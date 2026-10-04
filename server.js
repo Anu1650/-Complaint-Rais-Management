@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
-const { db, verifyPassword } = require('./db');
+const { connect, complaints, admins, verifyPassword } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -15,50 +15,42 @@ app.use(session({
 }));
 app.use(express.static('public'));
 
-// First page = citizen page
 app.get('/', (req, res) => res.redirect('/index.html'));
-// /admin → login (then dashboard after OTP)
 app.get('/admin', (req, res) => res.redirect('/login.html'));
 
-
-
-function nextId() {
+async function nextId() {
   const year = new Date().getFullYear();
-  const row = db.prepare(`SELECT id FROM complaints WHERE id LIKE ? ORDER BY id DESC LIMIT 1`).get(`GP-${year}-%`);
-  const n = row ? parseInt(row.id.split('-')[2], 10) + 1 : 1;
+  const last = await complaints().find({ id: { $regex: `^GP-${year}-` } }).sort({ id: -1 }).limit(1).toArray();
+  const n = last.length ? parseInt(last[0].id.split('-')[2], 10) + 1 : 1;
   return `GP-${year}-${String(n).padStart(5, '0')}`;
 }
 
 // ---------- Public APIs ----------
-app.post('/api/complaints', (req, res) => {
+app.post('/api/complaints', async (req, res) => {
   const { name, phone, category, description, location, media, mediaType } = req.body;
   if (!phone || !category || !location)
     return res.status(400).json({ error: 'Phone, category and location are required' });
   if (!/^[0-9]{10}$/.test(phone))
     return res.status(400).json({ error: 'Phone number must be exactly 10 digits' });
-  if (category === 'Other' && !description)
-    return res.status(400).json({ error: 'Please specify the complaint type' });
-  const id = nextId();
+  const id = await nextId();
   const createdAt = new Date().toLocaleString();
   const history = [{ status: 'Submitted', at: createdAt }];
-  db.prepare(`INSERT INTO complaints (id,name,phone,category,description,location,media,mediaType,status,assignedTo,createdAt,history)
-              VALUES (?,?,?,?,?,?,?,?,'Submitted','',?,?)`)
-    .run(id, name || '', phone, category, description || '', location, media || null, mediaType || null, createdAt, JSON.stringify(history));
+  await complaints().insertOne({ id, name: name || '', phone, category, description: description || '', location, media: media || null, mediaType: mediaType || null, status: 'Submitted', assignedTo: '', createdAt, history });
   res.json({ id });
 });
 
-app.get('/api/complaints/:id', (req, res) => {
-  const c = db.prepare('SELECT * FROM complaints WHERE id = ? COLLATE NOCASE').get(req.params.id);
+app.get('/api/complaints/:id', async (req, res) => {
+  const c = await complaints().findOne({ id: { $regex: `^${req.params.id}$`, $options: 'i' } });
   if (!c) return res.status(404).json({ error: 'Not found' });
-  c.history = JSON.parse(c.history);
+  delete c._id;
   res.json(c);
 });
 
-// ---------- Auth (username + password) ----------
-app.post('/api/auth/login', (req, res) => {
+// ---------- Auth ----------
+app.post('/api/auth/login', async (req, res) => {
   const username = (req.body.username || '').trim();
   const password = req.body.password || '';
-  const admin = db.prepare('SELECT * FROM admins WHERE username = ?').get(username);
+  const admin = await admins().findOne({ username });
   if (!admin || !verifyPassword(password, admin.passwordHash))
     return res.status(401).json({ error: 'Invalid username or password' });
   req.session.admin = admin.username;
@@ -79,39 +71,39 @@ app.get('/api/auth/me', (req, res) => {
 });
 
 // ---------- Admin APIs ----------
-app.get('/api/admin/complaints', requireAdmin, (req, res) => {
-  const rows = db.prepare('SELECT * FROM complaints ORDER BY createdAt DESC').all();
-  rows.forEach(r => r.history = JSON.parse(r.history));
+app.get('/api/admin/complaints', requireAdmin, async (req, res) => {
+  const rows = await complaints().find().sort({ createdAt: -1 }).toArray();
+  rows.forEach(r => delete r._id);
   res.json(rows);
 });
 
-app.patch('/api/admin/complaints/:id/status', requireAdmin, (req, res) => {
+app.patch('/api/admin/complaints/:id/status', requireAdmin, async (req, res) => {
   const { status } = req.body;
-  const c = db.prepare('SELECT * FROM complaints WHERE id = ?').get(req.params.id);
+  const c = await complaints().findOne({ id: req.params.id });
   if (!c) return res.status(404).json({ error: 'Not found' });
-  const history = JSON.parse(c.history);
-  history.push({ status, at: new Date().toLocaleString() });
-  db.prepare('UPDATE complaints SET status = ?, history = ? WHERE id = ?').run(status, JSON.stringify(history), req.params.id);
+  c.history.push({ status, at: new Date().toLocaleString() });
+  await complaints().updateOne({ id: req.params.id }, { $set: { status, history: c.history } });
   res.json({ message: 'Updated' });
 });
 
-app.patch('/api/admin/complaints/:id/assign', requireAdmin, (req, res) => {
+app.patch('/api/admin/complaints/:id/assign', requireAdmin, async (req, res) => {
   const { assignedTo } = req.body;
-  const c = db.prepare('SELECT * FROM complaints WHERE id = ?').get(req.params.id);
+  const c = await complaints().findOne({ id: req.params.id });
   if (!c) return res.status(404).json({ error: 'Not found' });
-  const history = JSON.parse(c.history);
   let status = c.status;
   if (status === 'Submitted' || status === 'Verified') {
     status = 'Assigned';
-    history.push({ status: 'Assigned', at: new Date().toLocaleString() });
+    c.history.push({ status: 'Assigned', at: new Date().toLocaleString() });
   }
-  db.prepare('UPDATE complaints SET assignedTo = ?, status = ?, history = ? WHERE id = ?').run(assignedTo, status, JSON.stringify(history), req.params.id);
+  await complaints().updateOne({ id: req.params.id }, { $set: { assignedTo, status, history: c.history } });
   res.json({ message: 'Assigned' });
 });
 
-app.delete('/api/admin/complaints/:id', requireAdmin, (req, res) => {
-  db.prepare('DELETE FROM complaints WHERE id = ?').run(req.params.id);
+app.delete('/api/admin/complaints/:id', requireAdmin, async (req, res) => {
+  await complaints().deleteOne({ id: req.params.id });
   res.json({ message: 'Deleted' });
 });
 
-app.listen(PORT, () => console.log(`✅ Server running at http://localhost:${PORT}`));
+connect().then(() => {
+  app.listen(PORT, () => console.log(`✅ Server running at http://localhost:${PORT}`));
+}).catch(err => { console.error('❌ MongoDB connection failed:', err.message); process.exit(1); });
