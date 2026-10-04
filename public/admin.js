@@ -33,8 +33,8 @@ async function load() {
       <td><span class="badge s-${c.status.replace(' ', '')}">${c.status}</span></td>
       <td>${c.assignedTo || '—'}</td>
       <td>${c.media ? (c.mediaType === 'video'
-        ? `<a href="${c.media}" target="_blank">▶️ Video</a>`
-        : `<a href="${c.media}" target="_blank">🖼️ Photo</a>`) : '—'}</td>
+        ? `<video src="${c.media}" style="max-width:140px;max-height:100px" controls preload="metadata"></video>`
+        : `<img src="${c.media}" style="max-width:140px;max-height:100px;border-radius:6px;cursor:zoom-in" onclick="showBig(this.src)" alt="evidence" />`) : '—'}</td>
       <td class="actions">
         ${STATUSES.filter(s => s !== c.status).map(s =>
           `<button data-id="${c.id}" data-status="${s}">➜ ${s}</button>`).join('')}

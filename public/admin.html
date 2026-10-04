@@ -28,6 +28,12 @@
       </table>
     </section>
   </main>
+  <div id="bigView" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:99;text-align:center;padding:40px" onclick="this.style.display='none'">
+    <img id="bigImg" style="max-width:90%;max-height:85vh;border-radius:8px" />
+  </div>
+  <script>
+    function showBig(src) { document.getElementById('bigImg').src = src; document.getElementById('bigView').style.display = 'block'; }
+  </script>
   <script src="admin.js"></script>
 </body>
 </html>
