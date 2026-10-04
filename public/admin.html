@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin Dashboard - Gram Panchayat</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>👨‍💼 Gram Panchayat Officer Dashboard</h1>
+    <nav>
+      <span id="who" style="align-self:center"></span>
+      <button class="nav-btn" id="logoutBtn">Logout</button>
+    </nav>
+  </header>
+  <main>
+    <section class="view active">
+      <div class="stats" id="stats"></div>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th><th>Category</th><th>Description</th><th>Location</th>
+            <th>Status</th><th>Assigned To</th><th>Evidence</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </section>
+  </main>
+  <script src="admin.js"></script>
+</body>
+</html>

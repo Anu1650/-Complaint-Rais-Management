@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gram Panchayat Complaint Management System</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1 data-i18n="title">🏛️ Gram Panchayat Complaint Management</h1>
+    <nav>
+      <button class="nav-btn active" data-view="citizen" data-i18n="navCitizen">👨‍🌾 Citizen</button>
+      <button class="nav-btn" data-view="track" data-i18n="navTrack">🔍 Track Complaint</button>
+      <a class="nav-btn" href="login.html" data-i18n="navAdmin">👨‍💼 Admin Login</a>
+      <select id="langSel" class="nav-btn" style="color:#2e7d32">
+        <option value="en-IN">English</option>
+        <option value="mr-IN">मराठी</option>
+      </select>
+      <button class="nav-btn" id="ttsBtn" data-i18n="navTts">🔊 Read Aloud</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- CITIZEN VIEW -->
+    <section id="view-citizen" class="view active">
+      <h2 data-i18n="h2Register">📝 Register a Complaint</h2>
+      <form id="complaintForm">
+        <label><span data-i18n="lName">Name</span><input type="text" id="cName" /></label>
+        <label><span data-i18n="lPhone">Phone / Contact</span> *
+          <input type="tel" id="cPhone" inputmode="numeric" maxlength="10" pattern="[0-9]{10}" placeholder="10-digit mobile number" required />
+        </label>
+        <label><span data-i18n="lCategory">Category</span> *
+          <select id="cCategory" required>
+            <option value="" data-i18n="optSelect">-- Select --</option>
+            <option data-i18n-opt="Water" value="Water">Water</option>
+            <option data-i18n-opt="Road" value="Road">Road</option>
+            <option data-i18n-opt="Electricity" value="Electricity">Electricity</option>
+            <option data-i18n-opt="Sanitation" value="Sanitation">Sanitation</option>
+            <option data-i18n-opt="Drainage" value="Drainage">Drainage</option>
+            <option data-i18n-opt="Streetlight" value="Streetlight">Streetlight</option>
+            <option data-i18n-opt="Agriculture" value="Agriculture">Agriculture</option>
+            <option data-i18n-opt="Other" value="Other">Other</option>
+          </select>
+        </label>
+        <label id="otherBox" class="hidden"><span data-i18n="lOther">Please specify</span> *
+          <input type="text" id="cOther" />
+        </label>
+        <label><span data-i18n="lDesc">Description</span><textarea id="cDesc" rows="4"></textarea></label>
+        <button type="button" class="primary" id="micBtn" style="margin-bottom:12px" data-i18n="btnMic">🎤 Speak Description</button>
+        <label>📍 <span data-i18n="lLocation">Location</span> *
+          <input type="text" id="cLocation" required />
+        </label>
+        <button type="button" class="primary" id="locBtn" style="margin-bottom:12px" data-i18n="btnLoc">📡 Use My Live Location</button>
+        <p id="locMsg" style="font-size:0.85rem;color:#555"></p>
+        <label>📷 <span data-i18n="lMedia">Photo / Video Evidence</span>
+          <input type="file" id="cMedia" accept="image/*,video/*" />
+        </label>
+        <div id="mediaPreview"></div>
+        <button type="submit" class="primary" data-i18n="btnSubmit">Submit Complaint</button>
+      </form>
+      <div id="submitResult" class="result hidden"></div>
+    </section>
+
+    <!-- TRACK VIEW -->
+    <section id="view-track" class="view">
+      <h2 data-i18n="h2Track">🔍 Track Your Complaint</h2>
+      <div class="row">
+        <input type="text" id="trackId" />
+        <button id="trackBtn" class="primary" data-i18n="btnSearch">Search</button>
+      </div>
+      <div id="trackResult"></div>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
